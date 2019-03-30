@@ -1,0 +1,2 @@
+cam_to_cv:usb_cam:vision_opencv/cv_bridge:vision_opencv/image_geometry:vision_opencv/opencv_tests:vision_opencv/vision_opencv
+-DCATKIN_DEVEL_PREFIX=/home/matija-kk/projekt/devel -DCMAKE_INSTALL_PREFIX=/home/matija-kk/projekt/install -G Unix Makefiles

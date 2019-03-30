@@ -1,0 +1,8 @@
+prefix=/home/matija-kk/projekt/devel
+
+Name: usb_cam
+Description: Description of usb_cam
+Version: 0.3.6
+Cflags: -I/home/matija-kk/projekt/src/usb_cam/include
+Libs: -L/home/matija-kk/projekt/devel/lib -lusb_cam
+Requires: 

@@ -1,0 +1,15 @@
+<launch>
+  <node name="usb_cam" pkg="usb_cam" type="usb_cam_node" >
+    <param name="video_device" value="/dev/video1" />
+    <param name="image_width" value="640" />
+    <param name="image_height" value="480" />
+    <param name="pixel_format" value="yuyv" />
+    <param name="camera_frame_id" value="usb_cam" />
+    <param name="io_method" value="mmap"/>
+    <param name="focus" value="25"/>
+  </node>
+  <node name="cam_to_cv" pkg="cam_to_cv" type="cam_to_cv.py">
+  </node>
+  <!-- <node name="cv_to_files" pkg="cam_to_cv" type="cv_to_files.py" output="screen"> -->
+  <!-- </node> -->
+</launch>
