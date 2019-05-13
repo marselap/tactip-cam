@@ -10,6 +10,9 @@
   </node>
   <node name="cam_to_cv" pkg="cam_to_cv" type="cam_to_cv.py">
   </node>
+  <node name="predictor" pkg="cam_to_cv" type="encode_blobs_node.py" output="screen">
+  </node>
+
   <!-- <node name="cv_to_files" pkg="cam_to_cv" type="cv_to_files.py" output="screen"> -->
   <!-- </node> -->
 </launch>
