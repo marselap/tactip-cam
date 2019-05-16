@@ -31,7 +31,7 @@ class create_dataset_opto:
 
         encoderPath = '/home/marsela/catkin_ws/src/tactip-cam/src/cam_to_cv/scripts/5encoder.h5'
         self.encoderModel = load_model(encoderPath)
-        estimatorPath = '/home/marsela/catkin_ws/src/tactip-cam/src/cam_to_cv/scripts/tockice-nn.h5'
+        estimatorPath = '/home/marsela/catkin_ws/src/tactip-cam/src/cam_to_cv/scripts/tockice-focus.h5'
         self.estimatorModel = load_model(estimatorPath)
 
     def callback_image(self, data):
@@ -70,22 +70,33 @@ class create_dataset_opto:
     def preproc(self):
         # cv_image = process_2(self.cv_image)
         cv_image = self.cv_image
-        centresX, centresY = blob_centres(cv_image)
-        my_dpi = 166.
-        fig = plt.figure(figsize=(300./my_dpi,300./my_dpi),frameon=False)
-        ax = plt.Axes(fig, [0., 0., 1., 1.])
-        ax.set_axis_off()
-        fig.add_axes(ax)
-        plt.scatter(centresX, centresY, c='black')
-        fig.subplots_adjust(bottom=0.,left=0.,right=1.,top=1.)
-        # plt.show()
+        success, centresX, centresY = blob_centres(cv_image)
+        if success:
 
-        fig.canvas.draw()
-        img = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep='')
-        print(fig.canvas.get_width_height()[::-1] + (3,))
-        img  = img.reshape(fig.canvas.get_width_height()[::-1] + (3,))
-        img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-        return img
+            blank_image = np.zeros((300,300,1), np.uint8)
+            for (x,y) in zip(centresX, centresY):
+                cv2.circle(blank_image, (x,y), 4, (255,255,255), -1)
+            kernel_size = 4
+            kernel = np.ones((kernel_size, kernel_size), np.uint8)
+            img = cv2.morphologyEx(blank_image, cv2.MORPH_OPEN, kernel)
+
+            # my_dpi = 166.
+            # fig = plt.figure(figsize=(300./my_dpi,300./my_dpi),frameon=False)
+            # ax = plt.Axes(fig, [0., 0., 1., 1.])
+            # ax.set_axis_off()
+            # fig.add_axes(ax)
+            # plt.scatter(centresX, centresY, c='black')
+            # fig.subplots_adjust(bottom=0.,left=0.,right=1.,top=1.)
+            # # plt.show()
+            #
+            # fig.canvas.draw()
+            # img = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep='')
+            # print(fig.canvas.get_width_height()[::-1] + (3,))
+            # img  = img.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+            # img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+            return True, img
+        else:
+            return False, []
 
     def encode(self, cv_image):
         resize_size = 28
@@ -103,10 +114,16 @@ class create_dataset_opto:
         return img_enc_1d
 
     def predict(self):
-        img = self.preproc()
-        img_encoded = self.encode(img)
-        force = self.estimatorModel.predict(np.array([img_encoded,]))
-        return force
+        success, img = self.preproc()
+
+        if success:
+            cv2.imshow("img", img)
+            cv2.waitKey(10)
+            img_encoded = self.encode(img)
+            force = self.estimatorModel.predict(np.array([img_encoded,]))
+            return True, force
+        else:
+            return False, []
 
 
 
@@ -118,15 +135,23 @@ def blob_centres(cv_image):
     cv2.drawContours(im, cnts[1], -1, (255, 255, 255), -1)
     centresX = []
     centresY = []
+    success = True
     for (i,c) in enumerate(cnts[1]):
         M = cv2.moments(c)
-        Cx= int(M["m10"] / M["m00"])
-        Cy = int(M["m01"] / M["m00"])
-        centresX.append(Cx)
-        centresY.append(Cy)
+        # print("++++++++++++++++++++++++++++++++")
+        # print(M)
+        # print("++++++++++++++++++++++++++++++++")
+        try:
+            Cx= int(M["m10"] / M["m00"])
+            Cy = int(M["m01"] / M["m00"])
+            centresX.append(Cx)
+            centresY.append(Cy)
+        except:
+            # success = False
+            pass
     centresX = [centresX[i] for i in np.argsort(centresY)]
     centresY = [centresY[i] for i in np.argsort(centresY)]
-    return centresX, centresY
+    return success, centresX, centresY
 
 def createForceMsg(force):
     force_msg = Wrench()
@@ -147,13 +172,20 @@ def createForceMsg(force):
 def main(args):
     ic = create_dataset_opto()
     rospy.init_node('create_dataset_opto', anonymous = True, disable_signals = True)
+    min_y = [0.0, 0.0, 0.0, -0.93527323, -0.17835155, -0.36657366]
+    max_y = [3.628354, 2.8112476, 8.98534, 0.0, 0.5463106, 0.024878157]
+
     try:
         while True:
             if ic.new_image:
-                force = ic.predict()
+                success, force = ic.predict()
                 ic.new_image = False
-                force_msg = createForceMsg(force[0])
-                ic.force_pub.publish(force_msg)
+                if success:
+                    force = force[0]
+                    # for i in xrange(6):
+                    force = [y * (max_y[i] - min_y[i]) + min_y[i] for i,y in enumerate(force)]
+                    force_msg = createForceMsg(force)
+                    ic.force_pub.publish(force_msg)
                 print("-------------")
                 print(force)
                 print("-------------")

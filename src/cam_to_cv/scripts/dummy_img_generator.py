@@ -82,7 +82,13 @@ def main(args):
   try:
       while True:
           cv_image = ic.load_new_image()
+          cv2.imshow("cv_image", cv_image)
+          cv2.waitKey(10)
+
           cv_image = process_2(cv_image)
+          # cv2.imshow("cv_image", cv_image)
+          # cv2.waitKey(10)
+
           image_message = ic.bridge.cv2_to_imgmsg(cv_image)#, encoding="passthrough")
           ic.image_pub.publish(image_message)
           time.sleep(1.0)
